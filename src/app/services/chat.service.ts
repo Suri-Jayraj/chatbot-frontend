@@ -1,40 +1,60 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Observer } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
-  private apiUrl = 'https://localhost:7263/api/chat';
-
-  constructor() {}
+  private readonly apiUrl = 'https://jayweb-hzdtdjcfgzfwfec4.canadacentral-01.azurewebsites.net/chat';
+  private lastData = ''; // Track last processed data to find only new chunks
 
   sendMessage(message: string): Observable<string> {
-    return new Observable(observer => {
-      fetch(this.apiUrl, {
-        method: 'POST', // ✅ Use POST instead of GET
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      }).then(response => {
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    return new Observable((observer: Observer<string>) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Reset the lastData for new message
+      this.lastData = '';
 
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("Failed to get response body reader");
+      xhr.open('POST', this.apiUrl, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.responseType = 'text';
 
-        const decoder = new TextDecoder();
-        
-        // Read the stream chunk by chunk
-        const readStream = async () => {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            observer.next(decoder.decode(value)); // Stream each chunk to UI
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            observer.complete();
+          } else {
+            observer.error(xhr.statusText);
           }
-          observer.complete();
-        };
+        }
+      };
 
-        readStream().catch(error => observer.error(error));
-      }).catch(error => observer.error(error));
+      xhr.onprogress = () => {
+        const currentData = xhr.responseText;
+        
+        // Only process new data since last time
+        if (currentData.length > this.lastData.length) {
+          // Extract only the new portion
+          const newData = currentData.substring(this.lastData.length);
+          
+          // Split into SSE lines
+          const lines = newData.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const content = line.slice(6); // Remove "data: " prefix but preserve whitespace
+              if (content) {
+                observer.next(content);
+              }
+            }
+          }
+          
+          // Update last processed data
+          this.lastData = currentData;
+        }
+      };
+
+      xhr.send(JSON.stringify({ userInput: message, history: [] }));
     });
   }
 }

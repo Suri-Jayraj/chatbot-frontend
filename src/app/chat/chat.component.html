@@ -2,7 +2,7 @@
   <div class="chat-header">
     <img [src]="botIcon" alt="Bot Icon" class="bot-icon">
     <h1>AI Assistant</h1>
-    <span class="model-info">DeepSeek R1</span>
+    <span class="model-info">GPT - 4.1</span>
     <div class="theme-selector">
       <select (change)="setTheme($event)">
         <option value="light">Light</option>
@@ -23,7 +23,7 @@
          [ngClass]="{'message': true, 'user-message': message.sender === 'user', 'bot-message': message.sender === 'bot'}">
       <img [src]="message.sender === 'bot' ? botIcon : userIcon" alt="Profile Icon" class="profile-icon">
       <div class="message-bubble">
-        <div class="message-content">{{ message.content }}</div>
+        <div class="message-content" [innerHTML]="formatMessage(message.content)"></div>
         <div class="message-timestamp">{{ message.timestamp | date:'short' }}</div>
       </div>
     </div>

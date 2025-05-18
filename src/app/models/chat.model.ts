@@ -2,6 +2,7 @@ export interface ChatMessage {
     content: string;
     sender: 'user' | 'bot';
     timestamp: Date;
+    type?: 'text' | 'code' | 'bullet-list';
   }
   
   export interface ChatRequest {
@@ -13,4 +14,3 @@ export interface ChatMessage {
     model: string;
     created_At: string;
   }
-  
